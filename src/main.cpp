@@ -1,14 +1,7 @@
 #include <Arduino.h>
+#include <VirtualWire.h>
 
-#include <RHReliableDatagram.h>                      // biblioteca Radiohead reliableDatagram
-#include <RH_ASK.h>                                  // biblioteca Radiohead ASK
-#include <SPI.h>                                     // biblioteca SPI
-
-#define TX_ADDRESS 1                                 // endereço do transmissor
-#define RX_ADDRESS 2                                 // endereço do recept
-#define RF_PIN 13
-
-#define RF_MULTIMEDIA 12
+#define RF_MULTIMEDIA 13
 #define RF_SUBWOOFER 11
 #define RF_CHROME 10
 #define RF_ESQCIMA 9
@@ -20,33 +13,34 @@
 #define RF_PROX 4
 #define RF_ANT 3
 #define RF_BT1 2
-#define RF_BT2 15
-
-RH_ASK driver(2000, RF_PIN);                         // instância RH ASK
-RHReliableDatagram gerente(driver, TX_ADDRESS);      // configurando o gerenciador
-
-uint8_t count = 1;                                   // contador
-uint8_t data[] = "Mensagem de teste";                // mensagem a ser enviada
-uint8_t buf[RH_ASK_MAX_MESSAGE_LEN];                 // buffer da mensagem
+#define RF_BT2 14
 
 void checkAndSend(int pin)
 {
-  if (digitalRead(pin) == HIGH) {
-    char message[3];
-    sprintf(message, "%d", pin);
-    
-    Serial.println(message);  // print na console serial
-    gerente.sendtoWait((uint8_t *)message, strlen(message), RX_ADDRESS);  // envia a mensagem
+  if (digitalRead(pin) == HIGH)
+  {
+    char data[4];   
+    itoa(pin, data,10);
+
+    if (vw_send((uint8_t *)data, strlen(data)))
+    {               
+      vw_wait_tx(); 
+      Serial.println("Enviado");
+      Serial.println(data);
+    }
+    else
+    {
+      Serial.println("Falha no envio");
+    }
   }
 }
 
 void setup()
 {
-  Serial.begin(9600);                                // inicializa console serial 9600 bps
-  if (!gerente.init())                               // se a inicialização do gerenciador falhar
-    Serial.println("Falha na inicializacao");        // print na console serial
+  Serial.begin(9600);
+  vw_set_tx_pin(12);
+  vw_setup(2000);
 
-  // Configura todos os pinos como entrada
   pinMode(RF_MULTIMEDIA, INPUT);
   pinMode(RF_SUBWOOFER, INPUT);
   pinMode(RF_CHROME, INPUT);
@@ -63,7 +57,6 @@ void setup()
 
 void loop()
 {
-  // Verifica o estado de cada pino e envia o número do pino se estiver HIGH
   checkAndSend(RF_MULTIMEDIA);
   checkAndSend(RF_SUBWOOFER);
   checkAndSend(RF_CHROME);
@@ -77,5 +70,5 @@ void loop()
   checkAndSend(RF_BT1);
   checkAndSend(RF_BT2);
 
-  delay(500);                                               // atraso 0,5 segundo
+  delay(500);
 }
